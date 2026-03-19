@@ -6,104 +6,77 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true) // Switch entre Connexion et Inscription
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClientComponentClient()
 
-  const handleAuth = async (e) => {
+  // Fonction pour se connecter
+  const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
-
-    if (isLogin) {
-      // --- LOGIQUE CONNEXION ---
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      
-      if (error) {
-        alert("Erreur de connexion : " + error.message)
-        setLoading(false)
-      } else {
-        // Redirection selon le rôle
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single()
-        if (profile?.role === 'admin') router.push('/admin/dashboard')
-        else if (profile?.role === 'merchant') router.push('/merchant/dashboard')
-        else router.push('/customer/dashboard')
-        router.refresh()
-      }
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    
+    if (error) {
+      alert("Erreur connexion : " + error.message)
+      setLoading(false)
     } else {
-      // --- LOGIQUE INSCRIPTION ---
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` }
-      })
-
-      if (error) {
-        alert("Erreur d'inscription : " + error.message)
-        setLoading(false)
-      } else {
-        alert("Compte créé ! Vous pouvez maintenant vous connecter.")
-        setIsLogin(true) // On repasse sur le formulaire de connexion
-        setLoading(false)
-      }
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single()
+      if (profile?.role === 'admin') router.push('/admin/dashboard')
+      else if (profile?.role === 'merchant') router.push('/merchant/dashboard')
+      else router.push('/customer/dashboard')
+      router.refresh()
     }
   }
 
-  return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>FideliPass</h1>
-        <h2 style={styles.subtitle}>{isLogin ? 'Connexion' : 'Créer un compte'}</h2>
+  // Fonction pour s'inscrire
+  const handleRegister = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` }
+    })
 
-        <form onSubmit={handleAuth} style={styles.form}>
-          <input 
-            type="email" 
-            placeholder="Votre email" 
-            value={email} 
-            onChange={(e) => setEmail(e.target.value)} 
-            required 
-            style={styles.input}
-          />
-          <input 
-            type="password" 
-            placeholder="Mot de passe" 
-            value={password} 
-            onChange={(e) => setPassword(e.target.value)} 
-            required 
-            style={styles.input}
-          />
-          <button type="submit" disabled={loading} style={isLogin ? styles.btnLogin : styles.btnRegister}>
-            {loading ? 'Patientez...' : (isLogin ? 'Se connecter' : "S'inscrire")}
+    if (error) {
+      alert("Erreur inscription : " + error.message)
+    } else {
+      alert("Compte créé avec succès ! Connectez-vous maintenant juste au-dessus.")
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div style={{ padding: '40px', fontFamily: 'sans-serif', maxWidth: '400px', margin: 'auto' }}>
+      <h1 style={{ textAlign: 'center', color: '#0070f3' }}>FideliPass</h1>
+
+      {/* --- BLOC CONNEXION --- */}
+      <div style={{ padding: '20px', border: '2px solid #0070f3', borderRadius: '10px', marginBottom: '30px' }}>
+        <h2 style={{ marginTop: 0 }}>Se connecter</h2>
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <input type="email" placeholder="Email" onChange={(e) => setEmail(e.target.value)} required style={{ padding: '10px' }} />
+          <input type="password" placeholder="Mot de passe" onChange={(e) => setPassword(e.target.value)} required style={{ padding: '10px' }} />
+          <button type="submit" disabled={loading} style={{ padding: '10px', backgroundColor: '#0070f3', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
+            {loading ? 'Chargement...' : 'CONNEXION'}
           </button>
         </form>
+      </div>
 
-        <div style={styles.footer}>
-          <p style={{ color: '#666' }}>
-            {isLogin ? "Pas encore de compte ?" : "Déjà inscrit ?"}
-          </p>
-          <button 
-            onClick={() => setIsLogin(!isLogin)} 
-            style={styles.switchBtn}
-          >
-            {isLogin ? "Créer un compte gratuitement" : "Se connecter à mon compte"}
+      <hr />
+
+      {/* --- BLOC INSCRIPTION --- */}
+      <div style={{ padding: '20px', border: '1px solid #ccc', borderRadius: '10px', marginTop: '30px', backgroundColor: '#f9f9f9' }}>
+        <h3 style={{ marginTop: 0 }}>Nouveau ici ? Créer un compte</h3>
+        <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <input type="email" placeholder="Email" onChange={(e) => setEmail(e.target.value)} required style={{ padding: '10px' }} />
+          <input type="password" placeholder="Choisir un mot de passe" onChange={(e) => setPassword(e.target.value)} required style={{ padding: '10px' }} />
+          <button type="submit" disabled={loading} style={{ padding: '10px', backgroundColor: '#28a745', color: 'white', border: 'none', cursor: 'pointer' }}>
+            CRÉER MON COMPTE
           </button>
-        </div>
+        </form>
       </div>
     </div>
   )
-}
-
-const styles = {
-  container: { display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f7fb', fontFamily: 'sans-serif' },
-  card: { padding: '40px', backgroundColor: '#fff', borderRadius: '15px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', width: '100%', maxWidth: '380px', textAlign: 'center' },
-  title: { color: '#0070f3', fontSize: '28px', marginBottom: '5px' },
-  subtitle: { color: '#333', fontSize: '18px', marginBottom: '30px', fontWeight: '400' },
-  form: { display: 'flex', flexDirection: 'column', gap: '15px' },
-  input: { padding: '12px 15px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '16px', outline: 'none' },
-  btnLogin: { padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: '#0070f3', color: '#fff', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' },
-  btnRegister: { padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: '#28a745', color: '#fff', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px' },
-  footer: { marginTop: '25px', paddingTop: '20px', borderTop: '1px solid #eee' },
-  switchBtn: { background: 'none', border: 'none', color: '#0070f3', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px', marginTop: '5px' }
 }
